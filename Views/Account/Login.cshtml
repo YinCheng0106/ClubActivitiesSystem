@@ -1,12 +1,12 @@
-@model ClubActivitiesSystem.Models.RegisterViewModel
+@model ClubActivitiesSystem.Models.LoginViewModel
 
 @{
-  ViewData[index: "Title"] = "註冊";
+  ViewData["Title"] = "登入";
 }
 
 <h2>@ViewData["Title"]</h2>
 
-<form asp-controller="Account" asp-action="Register" method="post">
+<form asp-controller="Account" asp-action="Login" method="post">
 
   <div asp-validation-summary="All" class="text-danger"></div>
 
@@ -22,13 +22,7 @@
     <span asp-validation-for="Password" class="text-danger"></span>
   </div>
 
-  <div class="form-group">
-    <label asp-for="ConfirmPassword">確認密碼</label>
-    <input asp-for="ConfirmPassword" class="form-control" placeholder="Confirm Password" />
-    <span asp-validation-for="ConfirmPassword" class="text-danger"></span>
-  </div>
-
-  <button type="submit" class="btn btn-primary">註冊</button>
+  <button type="submit" class="btn btn-primary">登入</button>
 </form>
 
 @section Scripts {
