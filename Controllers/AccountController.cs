@@ -2,7 +2,6 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using ClubActivitiesSystem.Db;
 using System.Security.Cryptography;
-using System.Text;
 using ClubActivitiesSystem.Models.ViewModel;
 
 namespace ClubActivitiesSystem.Controllers
@@ -109,12 +108,12 @@ namespace ClubActivitiesSystem.Controllers
             db.Sessions.Add(session);
             await db.SaveChangesAsync();
 
-            // 寫入 Cookie
+            // 寫入 Cookie：開發環境若走 http，Secure=true 會導致瀏覽器不送出 cookie
             Response.Cookies.Append("session_token", session.Token, new CookieOptions
             {
                 HttpOnly = true,
-                Secure = true,
-                SameSite = SameSiteMode.Strict,
+                Secure = Request.IsHttps,
+                SameSite = SameSiteMode.Lax,
                 Expires = session.ExpiresAt
             });
 

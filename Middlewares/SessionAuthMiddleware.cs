@@ -1,6 +1,6 @@
-﻿
-using Microsoft.EntityFrameworkCore;
+﻿using Microsoft.EntityFrameworkCore;
 using System.Security.Claims;
+using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authentication.Cookies;
 using ClubActivitiesSystem.Db;
 
@@ -29,8 +29,8 @@ public class SessionAuthMiddleware
             "/account/register",
             "/",
             "/home/index",
-            "/event/index",      // 若要允許活動列表匿名瀏覽可加上
-            "/event/details"     // 若要允許活動詳情匿名瀏覽可加上
+            "/event/index",
+            "/event/details"
         };
 
         bool isAllowed = allowAnonymous.Any(x => path.StartsWith(x));
@@ -44,15 +44,11 @@ public class SessionAuthMiddleware
 
             if (session != null && session.User != null)
             {
-                // 將使用者資訊轉成 Claims（給 [Authorize] 使用）
                 var claims = new List<Claim>
                 {
-                    new Claim(ClaimTypes.NameIdentifier, session.User.Id),   // 假設 User.Id 是 string
+                    new Claim(ClaimTypes.NameIdentifier, session.User.Id),
                     new Claim(ClaimTypes.Name, session.User.Name ?? session.User.Email ?? session.User.Id)
                 };
-
-                // 若你有角色，加入：
-                // foreach (var role in session.User.Roles) claims.Add(new Claim(ClaimTypes.Role, role));
 
                 var identity = new ClaimsIdentity(claims, CookieAuthenticationDefaults.AuthenticationScheme);
                 var principal = new ClaimsPrincipal(identity);
@@ -60,10 +56,12 @@ public class SessionAuthMiddleware
                 // 設定目前使用者（本次請求）
                 context.User = principal;
 
-                // 若你希望同時建立 Cookie（可選），避免每次都查 DB：
-                // await context.SignInAsync(CookieAuthenticationDefaults.AuthenticationScheme, principal);
+                // 建立 ASP.NET Core Authentication cookie，讓 [Authorize] 正常工作
+                if (!(context.User?.Identity?.IsAuthenticated ?? false))
+                {
+                    await context.SignInAsync(CookieAuthenticationDefaults.AuthenticationScheme, principal);
+                }
 
-                // 保留你原本的 Items
                 context.Items["User"] = session.User;
                 context.Items["Session"] = session;
 

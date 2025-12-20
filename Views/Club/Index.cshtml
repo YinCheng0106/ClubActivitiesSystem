@@ -11,7 +11,22 @@
     int pageSize = string.IsNullOrEmpty(query["PageSize"]) ? Model.PageSize : int.Parse(query["PageSize"]);
 }
 
-<h2>社團列表</h2>
+<div class="d-flex justify-content-between align-items-center mb-2">
+    <h2 class="mb-0">社團列表</h2>
+
+    @if (User?.Identity?.IsAuthenticated ?? false)
+    {
+        <a class="btn btn-success" asp-action="Create">
+            建立社團
+        </a>
+    }
+    else
+    {
+        <a class="btn btn-outline-success" asp-controller="Account" asp-action="Login">
+            登入後可建立社團
+        </a>
+    }
+</div>
 
 <!-- ================= 搜尋 / 排序 ================= -->
 <form method="get" asp-action="Index" class="mb-3">

@@ -1,8 +1,6 @@
-﻿
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
-using System.Linq;
 using ClubActivitiesSystem.Models.Entities;
 
 namespace ClubActivitiesSystem.Models.ViewModel
@@ -33,9 +31,6 @@ namespace ClubActivitiesSystem.Models.ViewModel
         [Required]
         [RegularExpression("Draft|Published|Archived", ErrorMessage = "狀態必須為 Draft / Published / Archived")]
         public string Status { get; set; } = "Draft";
-        public object? Id { get; internal set; }
-        public string? CreatedBy { get; internal set; }
-        public DateTime CreatedAt { get; internal set; }
 
         public IEnumerable<ValidationResult> Validate(ValidationContext validationContext)
         {
@@ -44,6 +39,7 @@ namespace ClubActivitiesSystem.Models.ViewModel
                 yield return new ValidationResult("結束時間必須晚於開始時間。", new[] { nameof(EndTime) });
             }
         }
+
         public Event ToEntity(string currentUserId)
         {
             var startUtc = NormalizeToUtc(StartTime!.Value);
@@ -59,6 +55,7 @@ namespace ClubActivitiesSystem.Models.ViewModel
                 EndTime = endUtc,
                 Status = string.IsNullOrWhiteSpace(Status) ? "Draft" : Status,
                 CreatedBy = currentUserId,
+                CreatedAt = DateTime.UtcNow
             };
         }
 
@@ -69,6 +66,7 @@ namespace ClubActivitiesSystem.Models.ViewModel
                 ? DateTime.SpecifyKind(dt, DateTimeKind.Local).ToUniversalTime()
                 : dt.ToUniversalTime();
         }
+
         public static CreateEventViewModel WithDefaults()
         {
             var nowLocal = DateTime.Now;

@@ -17,7 +17,7 @@ namespace ClubActivitiesSystem.Controllers
         public EventController(DBContext db, ILogger<EventController> logger)
         {
             this.db = db;
-           _logger = logger;
+            _logger = logger;
         }
 
         // 方便取用目前使用者資訊
@@ -26,14 +26,22 @@ namespace ClubActivitiesSystem.Controllers
 
         private bool IsEventOwner(Event e) => e.CreatedBy == CurrentUserId;
 
+        private static DateTime NormalizeToUtc(DateTime dt)
+        {
+            return dt.Kind == DateTimeKind.Unspecified
+                ? DateTime.SpecifyKind(dt, DateTimeKind.Local).ToUniversalTime()
+                : dt.ToUniversalTime();
+        }
+
         // 活動列表（對外公開）
         [AllowAnonymous]
         public async Task<IActionResult> Index(int? clubId, string? status, DateTime? from, DateTime? to)
         {
             var q = db.Events
-                       .Include(e => e.Club)
-                       .Include(e => e.CreatedByUser)
-                       .AsQueryable();
+                .AsNoTracking()
+                .Include(e => e.Club)
+                .Include(e => e.CreatedByUser)
+                .AsQueryable();
 
             if (clubId.HasValue)
                 q = q.Where(e => e.ClubId == clubId.Value);
@@ -47,9 +55,7 @@ namespace ClubActivitiesSystem.Controllers
             if (to.HasValue)
                 q = q.Where(e => e.EndTime <= to.Value);
 
-            q = q.OrderBy(e => e.StartTime);
-
-            var list = await q.ToListAsync();
+            var list = await q.OrderBy(e => e.StartTime).ToListAsync();
             return View(list); // 對應 Views/Event/Index.cshtml
         }
 
@@ -57,8 +63,7 @@ namespace ClubActivitiesSystem.Controllers
         [HttpGet]
         public async Task<IActionResult> Create()
         {
-            // 若需要下拉選單，可在 View 讀取 Clubs
-            ViewBag.Clubs = await db.Clubs.OrderBy(c => c.ClubName).ToListAsync();
+            ViewBag.Clubs = await db.Clubs.AsNoTracking().OrderBy(c => c.ClubName).ToListAsync();
             return View(new Event
             {
                 StartTime = DateTime.UtcNow.AddDays(1),
@@ -72,20 +77,24 @@ namespace ClubActivitiesSystem.Controllers
         public async Task<IActionResult> Create(CreateEventViewModel model)
         {
             var user = HttpContext.Items["User"] as User;
+            if (user == null)
+                return RedirectToAction("Login", "Account");
+
             if (model.StartTime >= model.EndTime)
                 ModelState.AddModelError(nameof(model.EndTime), "結束時間必須晚於開始時間。");
 
             if (!ModelState.IsValid)
             {
-                ViewBag.Clubs = await db.Clubs.OrderBy(c => c.ClubName).ToListAsync();
+                ViewBag.Clubs = await db.Clubs.AsNoTracking().OrderBy(c => c.ClubName).ToListAsync();
                 return View(model);
             }
 
-            db.Events.Add(model.ToEntity(user.Id));
+            var entity = model.ToEntity(user.Id);
+            db.Events.Add(entity);
             await db.SaveChangesAsync();
 
             TempData["Message"] = "活動建立成功。";
-            return RedirectToAction(nameof(Details), new { id = model.Id });
+            return RedirectToAction(nameof(Details), new { id = entity.Id });
         }
 
         // 額外提供詳情頁顯示（便於導向）
@@ -93,11 +102,12 @@ namespace ClubActivitiesSystem.Controllers
         public async Task<IActionResult> Details(int id)
         {
             var ev = await db.Events
-                              .Include(e => e.Club)
-                              .Include(e => e.CreatedByUser)
-                              .FirstOrDefaultAsync(e => e.Id == id);
-            if (ev == null) return NotFound();
+                .AsNoTracking()
+                .Include(e => e.Club)
+                .Include(e => e.CreatedByUser)
+                .FirstOrDefaultAsync(e => e.Id == id);
 
+            if (ev == null) return NotFound();
             return View(ev); // 對應 Views/Event/Details.cshtml
         }
 
@@ -108,10 +118,9 @@ namespace ClubActivitiesSystem.Controllers
             var ev = await db.Events.FirstOrDefaultAsync(e => e.Id == id);
             if (ev == null) return NotFound();
 
-            // 僅活動建立者或管理員可編輯
             if (!IsEventOwner(ev) && !IsAdmin) return Forbid();
 
-            ViewBag.Clubs = await db.Clubs.OrderBy(c => c.ClubName).ToListAsync();
+            ViewBag.Clubs = await db.Clubs.AsNoTracking().OrderBy(c => c.ClubName).ToListAsync();
             return View(ev);
         }
 
@@ -126,16 +135,19 @@ namespace ClubActivitiesSystem.Controllers
 
             if (!IsEventOwner(ev) && !IsAdmin) return Forbid();
 
+            // datetime-local 送回來通常是 Unspecified，這裡統一當 Local 轉 UTC 儲存
+            model.StartTime = NormalizeToUtc(model.StartTime);
+            model.EndTime = NormalizeToUtc(model.EndTime);
+
             if (model.StartTime >= model.EndTime)
                 ModelState.AddModelError(nameof(model.EndTime), "結束時間必須晚於開始時間。");
 
             if (!ModelState.IsValid)
             {
-                ViewBag.Clubs = await db.Clubs.OrderBy(c => c.ClubName).ToListAsync();
+                ViewBag.Clubs = await db.Clubs.AsNoTracking().OrderBy(c => c.ClubName).ToListAsync();
                 return View(model);
             }
 
-            // 更新允許的欄位
             ev.Title = model.Title;
             ev.Description = model.Description;
             ev.Location = model.Location;
@@ -146,7 +158,9 @@ namespace ClubActivitiesSystem.Controllers
 
             await db.SaveChangesAsync();
             TempData["Message"] = "活動已更新。";
-            return RedirectToAction(nameof(Details), new { id = ev.Id });
+
+            // 依需求：更新後跳回活動列表
+            return RedirectToAction(nameof(Index));
         }
 
         // ===== 刪除活動 =====
@@ -159,7 +173,6 @@ namespace ClubActivitiesSystem.Controllers
 
             if (!IsEventOwner(ev) && !IsAdmin) return Forbid();
 
-            // 也可選擇軟刪除；此處直接刪除
             db.Events.Remove(ev);
             await db.SaveChangesAsync();
 
@@ -173,9 +186,10 @@ namespace ClubActivitiesSystem.Controllers
         public async Task<IActionResult> Admin(string? status, int? clubId)
         {
             var q = db.Events
-                       .Include(e => e.Club)
-                       .Include(e => e.CreatedByUser)
-                       .AsQueryable();
+                .AsNoTracking()
+                .Include(e => e.Club)
+                .Include(e => e.CreatedByUser)
+                .AsQueryable();
 
             if (!string.IsNullOrWhiteSpace(status))
                 q = q.Where(e => e.Status == status);
@@ -192,9 +206,10 @@ namespace ClubActivitiesSystem.Controllers
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> Register(int eventId)
         {
-            if (CurrentUserId == null) return Challenge(); // 觸發登入流程
+            if (CurrentUserId == null)
+                return RedirectToAction("Login", "Account");
 
-            var ev = await db.Events.FirstOrDefaultAsync(e => e.Id == eventId);
+            var ev = await db.Events.AsNoTracking().FirstOrDefaultAsync(e => e.Id == eventId);
             if (ev == null) return NotFound();
 
             if (ev.EndTime <= DateTime.UtcNow)
@@ -203,31 +218,30 @@ namespace ClubActivitiesSystem.Controllers
                 return RedirectToAction(nameof(Details), new { id = eventId });
             }
 
-            // 禁止重複報名（非取消狀態）
             var existing = await db.EventRegistrations
-                                    .FirstOrDefaultAsync(r => r.EventId == eventId
-                                                           && r.UserId == CurrentUserId
-                                                           && r.Status != "Cancelled");
+                .FirstOrDefaultAsync(r => r.EventId == eventId
+                                       && r.UserId == CurrentUserId
+                                       && r.Status != "Cancelled");
+
             if (existing != null)
             {
                 TempData["Error"] = "您已報名此活動。";
                 return RedirectToAction(nameof(Details), new { id = eventId });
             }
 
-            var reg = new EventRegistration
+            db.EventRegistrations.Add(new EventRegistration
             {
                 EventId = eventId,
                 UserId = CurrentUserId!,
                 RegisteredAt = DateTime.UtcNow,
                 Status = "Pending",
                 PaymentStatus = "Unpaid"
-            };
+            });
 
-            db.EventRegistrations.Add(reg);
             await db.SaveChangesAsync();
 
             TempData["Message"] = "報名成功（待審核/付款）。";
-            return RedirectToAction(nameof(RegistrationList), new { eventId });
+            return RedirectToAction(nameof(Details), new { id = eventId });
         }
 
         // ===== 活動取消報名 =====
@@ -235,12 +249,14 @@ namespace ClubActivitiesSystem.Controllers
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> CancelRegistration(int eventId)
         {
-            if (CurrentUserId == null) return Challenge();
+            if (CurrentUserId == null)
+                return RedirectToAction("Login", "Account");
 
             var reg = await db.EventRegistrations
-                               .FirstOrDefaultAsync(r => r.EventId == eventId
-                                                     && r.UserId == CurrentUserId
-                                                     && r.Status != "Cancelled");
+                .FirstOrDefaultAsync(r => r.EventId == eventId
+                                       && r.UserId == CurrentUserId
+                                       && r.Status != "Cancelled");
+
             if (reg == null)
             {
                 TempData["Error"] = "找不到可取消的報名。";
@@ -258,17 +274,17 @@ namespace ClubActivitiesSystem.Controllers
         [HttpGet]
         public async Task<IActionResult> RegistrationList(int eventId)
         {
-            var ev = await db.Events.FirstOrDefaultAsync(e => e.Id == eventId);
+            var ev = await db.Events.AsNoTracking().FirstOrDefaultAsync(e => e.Id == eventId);
             if (ev == null) return NotFound();
 
-            // 僅活動建立者或管理員可查看報名列表
             if (!IsEventOwner(ev) && !IsAdmin) return Forbid();
 
             var regs = await db.EventRegistrations
-                                .Include(r => r.User)
-                                .Where(r => r.EventId == eventId)
-                                .OrderBy(r => r.RegisteredAt)
-                                .ToListAsync();
+                .AsNoTracking()
+                .Include(r => r.User)
+                .Where(r => r.EventId == eventId)
+                .OrderBy(r => r.RegisteredAt)
+                .ToListAsync();
 
             ViewBag.Event = ev;
             return View(regs); // 對應 Views/Event/RegistrationList.cshtml
