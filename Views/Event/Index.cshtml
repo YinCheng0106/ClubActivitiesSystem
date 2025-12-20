@@ -1,0 +1,82 @@
+﻿@using System.Security.Claims
+@using ClubActivitiesSystem.Models.Entities
+@model IEnumerable<Event>
+
+@{
+    ViewData["Title"] = "活動列表";
+    var currentUserId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+}
+
+<partial name="_FlashMessage" />
+
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <h2>@ViewData["Title"]</h2>
+    @if (User.Identity?.IsAuthenticated ?? false)
+    {
+        <a asp-action="Create" class="btn btn-primary">+ 建立活動</a>
+    }
+</div>
+
+<form method="get" class="row g-2 mb-3">
+    <div class="col-auto">
+        <input type="number" name="clubId" class="form-control" placeholder="社團ID" value="@(Context.Request.Query["clubId"])" />
+    </div>
+    <div class="col-auto">
+        <input type="text" name="status" class="form-control" placeholder="狀態 (Draft/Published/Archived)" value="@(Context.Request.Query["status"])" />
+    </div>
+    <div class="col-auto">
+        <input type="datetime-local" name="from" class="form-control" value="@(Context.Request.Query["from"])" />
+    </div>
+    <div class="col-auto">
+        <input type="datetime-local" name="to" class="form-control" value="@(Context.Request.Query["to"])" />
+    </div>
+    <div class="col-auto">
+        <button class="btn btn-outline-secondary" type="submit">篩選</button>
+    </div>
+</form>
+
+<table class="table table-hover align-middle">
+    <thead>
+        <tr>
+            <th>標題</th>
+            <th>社團</th>
+            <th>地點</th>
+            <th>時間</th>
+            <th>狀態</th>
+            <th class="text-end">操作</th>
+        </tr>
+    </thead>
+    <tbody>
+        @foreach (var e in Model)
+        {
+            <tr>
+                <td>
+                    <a asp-action="Details" asp-route-id="@e.Id">@e.Title</a>
+                </td>
+                <td>@e.Club?.ClubName</td>
+                <td>@e.Location</td>
+                <td>
+                    @e.StartTime.ToLocalTime().ToString("yyyy/MM/dd HH:mm")
+                    ~
+                    @e.EndTime.ToLocalTime().ToString("yyyy/MM/dd HH:mm")
+                </td>
+                <td>
+                    <span class="badge bg-secondary">@e.Status</span>
+                </td>
+                <td class="text-end">
+                    @if ((e.CreatedBy == currentUserId) || User.IsInRole("Admin"))
+                    {
+                        <a asp-action="Edit" asp-route-id="@e.Id" class="btn btn-sm btn-outline-primary">編輯</a>
+                        <a asp-action="RegistrationList" asp-route-eventId="@e.Id" class="btn btn-sm btn-outline-secondary">報名列表</a>
+
+                        <form asp-action="Delete" asp-route-id="@e.Id" method="post" class="d-inline" onsubmit="return confirm('確定要刪除這個活動嗎？');">
+                            @Html.AntiForgeryToken()
+                            <button type="submit" class="btn btn-sm btn-outline-danger">刪除</button>
+                        </form>
+                    }
+                </td>
+            </tr>
+        }
+    </tbody>
+</table>
+
