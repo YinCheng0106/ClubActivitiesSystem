@@ -1,4 +1,4 @@
-namespace ClubActivitiesSystem.Models
+namespace ClubActivitiesSystem.Models.ViewModel
 {
     public class ErrorViewModel
     {

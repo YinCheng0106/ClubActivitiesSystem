@@ -1,9 +1,9 @@
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using ClubActivitiesSystem.Db;
-using ClubActivitiesSystem.Models;
 using System.Security.Cryptography;
 using System.Text;
+using ClubActivitiesSystem.Models.ViewModel;
 
 namespace ClubActivitiesSystem.Controllers
 {

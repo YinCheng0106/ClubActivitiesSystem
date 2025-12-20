@@ -1,0 +1,93 @@
+﻿@model ClubActivitiesSystem.Models.ViewModel.ClubDetailViewModel
+
+@{
+    ViewData["Title"] = "社團詳細資訊";
+}
+
+<div class="container mt-5">
+
+    @* 麵包屑導航 (Breadcrumb) *@
+    <nav aria-label="breadcrumb">
+        <ol class="breadcrumb">
+            <li class="breadcrumb-item"><a asp-action="Index">社團列表</a></li>
+            <li class="breadcrumb-item active" aria-current="page">@Model.ClubName</li>
+        </ol>
+    </nav>
+
+    <div class="row">
+        <div class="col-lg-8">
+            <div class="card shadow-sm mb-4">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-start mb-3">
+                        <h2 class="card-title fw-bold text-primary">@Model.ClubName</h2>
+
+                        @if (Model.Status == "Active")
+                        {
+                            <span class="badge bg-success rounded-pill">活躍中</span>
+                        }
+                        else
+                        {
+                            <span class="badge bg-secondary rounded-pill">@Model.Status</span>
+                        }
+                    </div>
+
+                    <h5 class="text-muted mb-3">社團介紹</h5>
+                    <p class="card-text" style="white-space: pre-wrap;">@(Model.Description ?? "此社團尚未填寫描述。")</p>
+
+                    <hr />
+
+                    <div class="row text-muted small">
+                        <div class="col-md-4 mb-2">
+                            <i class="bi bi-person-circle"></i> 創辦人：@Model.CreatedByName
+                        </div>
+                        <div class="col-md-4 mb-2">
+                            <i class="bi bi-calendar3"></i> 創辦日期：@Model.CreatedAt.ToString("yyyy/MM/dd")
+                        </div>
+                        <div class="col-md-4 mb-2">
+                            <i class="bi bi-people-fill"></i> 成員數：@Model.MemberCount 人
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-lg-4">
+            <div class="card shadow-sm">
+                <div class="card-header bg-light">
+                    <h5 class="mb-0">操作</h5>
+                </div>
+                <div class="card-body d-grid gap-2">
+
+                    @if (Model.IsAdmin)
+                    {
+                        <div class="alert alert-info text-center mb-2">
+                            <i class="bi bi-shield-check"></i> 您是此社團的管理員
+                        </div>
+                        <a asp-action="Admin" asp-route-clubId="@Model.Id" class="btn btn-warning">
+                            <i class="bi bi-gear-fill"></i> 管理社團後台
+                        </a>
+                    }
+                    else if (Model.IsMember)
+                    {
+                        <div class="alert alert-success text-center mb-2">
+                            <i class="bi bi-check-circle-fill"></i> 您已是社團成員
+                        </div>
+                        <button class="btn btn-outline-secondary" disabled>已加入</button>
+                    }
+                    else
+                    {
+                        <p class="text-muted small text-center">對這個社團感興趣嗎？立即申請加入！</p>
+                        <a asp-action="Apply" asp-route-clubId="@Model.Id" class="btn btn-primary">
+                            <i class="bi bi-person-plus-fill"></i> 申請加入
+                        </a>
+                    }
+
+                    <hr />
+                    <a asp-action="Index" class="btn btn-outline-dark">
+                        <i class="bi bi-arrow-left"></i> 返回列表
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>

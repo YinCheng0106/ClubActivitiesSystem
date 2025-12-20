@@ -1,0 +1,35 @@
+﻿@model ClubActivitiesSystem.Models.ViewModel.JoinClubApplyViewModel
+@{
+    ViewData["Title"] = $"申請加入 — {Model.ClubName}";
+}
+
+<div class="container py-3">
+    <h2 class="mb-3">申請加入「@Model.ClubName」</h2>
+
+    <div asp-validation-summary="ModelOnly" class="text-danger mb-2"></div>
+
+    <form action="@Url.Action("Apply", "Club")" method="post">
+        @Html.AntiForgeryToken()
+
+        <input type="hidden" name="ClubId" value="@Model.ClubId" />
+        <input type="hidden" name="ClubName" value="@Model.ClubName" />
+
+        <div class="mb-3">
+            <label for="Message" class="form-label">申請留言</label>
+            <textarea id="Message" name="Message" class="form-control" rows="4"
+                      placeholder="可輸入申請理由或自我介紹（選填，最多 500 字）">@Model.Message</textarea>
+            <span class="text-danger" data-valmsg-for="Message" data-valmsg-replace="true"></span>
+        </div>
+
+        <div class="d-flex gap-2">
+            <button type="submit" class="btn btn-primary">送出申請</button>
+            <a class="btn btn-outline-secondary" href="@Url.Action("Details", "Club", new { id = Model.ClubId })">
+                返回社團頁
+            </a>
+        </div>
+    </form>
+</div>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+}

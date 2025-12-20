@@ -1,0 +1,148 @@
+﻿@using ClubActivitiesSystem.Models.ViewModel
+@model ClubPagedResultViewModel
+
+@{
+    ViewData["Title"] = "社團列表";
+
+    var query = Context.Request.Query;
+    string keyword = query["Keyword"];
+    string sortBy = string.IsNullOrEmpty(query["SortBy"]) ? "created" : query["SortBy"];
+    string sortOrder = string.IsNullOrEmpty(query["SortOrder"]) ? "desc" : query["SortOrder"];
+    int pageSize = string.IsNullOrEmpty(query["PageSize"]) ? Model.PageSize : int.Parse(query["PageSize"]);
+}
+
+<h2>社團列表</h2>
+
+<!-- ================= 搜尋 / 排序 ================= -->
+<form method="get" asp-action="Index" class="mb-3">
+    <div style="display:flex; gap:10px; align-items:end;">
+        <div>
+            <label>社團名稱</label>
+            <input type="text"
+                   name="Keyword"
+                   value="@keyword"
+                   class="form-control"
+                   placeholder="搜尋社團名稱" />
+        </div>
+
+        <div>
+            <label>排序依據</label>
+            <select name="SortBy" class="form-control">
+                <option value="created" selected="@(sortBy == "created")">建立時間</option>
+                <option value="name" selected="@(sortBy == "name")">社團名稱</option>
+            </select>
+        </div>
+
+        <div>
+            <label>排序方向</label>
+            <select name="SortOrder" class="form-control">
+                <option value="desc" selected="@(sortOrder == "desc")">新 → 舊</option>
+                <option value="asc" selected="@(sortOrder == "asc")">舊 → 新</option>
+            </select>
+        </div>
+
+        <div>
+            <label>每頁筆數</label>
+            <select name="PageSize" class="form-control">
+                @foreach (var size in new[] { 10, 20, 30, 50 })
+                {
+                    <option value="@size" selected="@(pageSize == size)">
+                        @size
+                    </option>
+                }
+            </select>
+        </div>
+
+        <div>
+            <button type="submit" class="btn btn-primary">搜尋</button>
+        </div>
+    </div>
+</form>
+
+<hr />
+
+<!-- ================= 社團列表 ================= -->
+@if (!Model.Clubs.Any())
+{
+    <p>找不到符合條件的社團</p>
+}
+else
+{
+    <table class="table table-striped">
+        <thead>
+            <tr>
+                <th>社團名稱</th>
+                <th>描述</th>
+                <th>成員數</th>
+                <th></th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var club in Model.Clubs)
+            {
+                <tr>
+                    <td>@club.ClubName</td>
+                    <td>@club.Description</td>
+                    <td>@club.MemberCount</td>
+                    <td>
+                        <a asp-action="Details"
+                           asp-route-id="@club.Id"
+                           class="btn btn-sm btn-outline-secondary">
+                            查看
+                        </a>
+                    </td>
+                </tr>
+            }
+        </tbody>
+    </table>
+}
+
+<!-- ================= 分頁 ================= -->
+@if (Model.TotalPages > 1)
+{
+    <nav>
+        <ul class="pagination">
+            <!-- 上一頁 -->
+            <li class="page-item @(Model.CurrentPage == 1 ? "disabled" : "")">
+                <a class="page-link"
+                   asp-action="Index"
+                   asp-route-Page="@(Model.CurrentPage - 1)"
+                   asp-route-Keyword="@keyword"
+                   asp-route-SortBy="@sortBy"
+                   asp-route-SortOrder="@sortOrder"
+                   asp-route-PageSize="@pageSize">
+                    上一頁
+                </a>
+            </li>
+
+            <!-- 頁碼 -->
+            @for (int i = 1; i <= Model.TotalPages; i++)
+            {
+                <li class="page-item @(i == Model.CurrentPage ? "active" : "")">
+                    <a class="page-link"
+                       asp-action="Index"
+                       asp-route-Page="@i"
+                       asp-route-Keyword="@keyword"
+                       asp-route-SortBy="@sortBy"
+                       asp-route-SortOrder="@sortOrder"
+                       asp-route-PageSize="@pageSize">
+                        @i
+                    </a>
+                </li>
+            }
+
+            <!-- 下一頁 -->
+            <li class="page-item @(Model.CurrentPage == Model.TotalPages ? "disabled" : "")">
+                <a class="page-link"
+                   asp-action="Index"
+                   asp-route-Page="@(Model.CurrentPage + 1)"
+                   asp-route-Keyword="@keyword"
+                   asp-route-SortBy="@sortBy"
+                   asp-route-SortOrder="@sortOrder"
+                   asp-route-PageSize="@pageSize">
+                    下一頁
+                </a>
+            </li>
+        </ul>
+    </nav>
+}

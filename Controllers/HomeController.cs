@@ -1,5 +1,5 @@
 using System.Diagnostics;
-using ClubActivitiesSystem.Models;
+using ClubActivitiesSystem.Models.ViewModel ;
 using Microsoft.AspNetCore.Mvc;
 
 namespace ClubActivitiesSystem.Controllers

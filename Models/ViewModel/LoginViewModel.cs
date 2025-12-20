@@ -1,4 +1,4 @@
-namespace ClubActivitiesSystem.Models
+namespace ClubActivitiesSystem.Models.ViewModel
 {
   using System.ComponentModel.DataAnnotations;
   public class LoginViewModel

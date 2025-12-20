@@ -1,0 +1,136 @@
+﻿@model ClubActivitiesSystem.Models.ViewModel.ClubAdminViewModel
+@{
+    ViewData["Title"] = $"{Model.ClubName} — 管理後台";
+}
+
+<div class="container py-3">
+    <div class="d-flex align-items-center mb-3">
+        <h2 class="me-auto mb-0">
+            @Model.ClubName <small class="text-muted">管理後台</small>
+        </h2>
+        <a class="btn btn-outline-secondary"
+           asp-action="Details"
+           asp-route-id="@Model.ClubId">返回社團頁</a>
+    </div>
+
+    <!-- 簡易統計 -->
+    <div class="row g-3">
+        <div class="col-md-6">
+            <div class="card h-100">
+                <div class="card-body">
+                    <div class="fs-6 text-muted">已核准會員</div>
+                    <div class="display-6 fw-bold">@Model.Members?.Count</div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-6">
+            <div class="card h-100">
+                <div class="card-body">
+                    <div class="fs-6 text-muted">待審核申請</div>
+                    <div class="display-6 fw-bold">@Model.PendingApplications?.Count</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <hr class="my-4" />
+
+    <!-- 待審核申請區塊 -->
+    <section id="pending">
+        <h3 class="h5 mb-3">待審核申請</h3>
+
+        @if (Model.PendingApplications == null || !Model.PendingApplications.Any())
+        {
+            <div class="alert alert-info">目前沒有待審核的申請。</div>
+        }
+        else
+        {
+            <div class="table-responsive">
+                <table class="table table-sm table-hover align-middle mb-0">
+                    <thead class="table-light">
+                        <tr>
+                            <th style="width: 30%">申請者</th>
+                            <th>留言</th>
+                            <th style="width: 20%">申請時間</th>
+                            <th class="text-end" style="width: 12%">操作</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var app in Model.PendingApplications)
+                        {
+                            <tr>
+                                <td>
+                                    <div class="fw-semibold">@app.UserName</div>
+                                    <div class="text-muted small">@app.UserId</div>
+                                </td>
+                                <td>@(string.IsNullOrWhiteSpace(app.Message) ? "-" : app.Message)</td>
+                                <td>@app.CreatedAt.ToLocalTime().ToString("yyyy/MM/dd HH:mm")</td>
+                                <td class="text-end">
+                                    <form asp-action="ApproveApplication"
+                                          method="post"
+                                          class="d-inline"
+                                          onsubmit="return confirm('確定核准這位申請者加入社團嗎？');">
+                                        @Html.AntiForgeryToken()
+                                        <input type="hidden" name="applicationId" value="@app.ApplicationId" />
+                                        <button type="submit" class="btn btn-success btn-sm">
+                                            核准
+                                        </button>
+                                    </form>
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        }
+    </section>
+
+    <hr class="my-4" />
+
+    <!-- 會員名單區塊 -->
+    <section id="members">
+        <h3 class="h5 mb-3">會員名單</h3>
+
+        @if (Model.Members == null || !Model.Members.Any())
+        {
+            <div class="alert alert-warning">目前社團尚無會員。</div>
+        }
+        else
+        {
+            <div class="table-responsive">
+                <table class="table table-striped table-hover align-middle mb-0">
+                    <thead class="table-light">
+                        <tr>
+                            <th style="width: 30%">姓名</th>
+                            <th style="width: 20%">角色</th>
+                            <th style="width: 20%">加入日期</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var m in Model.Members)
+                        {
+                            <tr>
+                                <td>
+                                    <div class="fw-semibold">@m.UserName</div>
+                                    <div class="text-muted small">@m.UserId</div>
+                                </td>
+                                <td>
+                                    @if (string.Equals(m.Role, "Admin", StringComparison.OrdinalIgnoreCase))
+                                    {
+                                        <span class="badge bg-primary">Admin</span>
+                                    }
+                                    else
+                                    {
+                                        <span class="badge bg-secondary">Member</span>
+                                    }
+                                </td>
+                                <td>@m.JoinDate.ToLocalTime().ToString("yyyy/MM/dd")</td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        }
+    </section>
+</div>
+``

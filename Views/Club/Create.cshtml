@@ -1,0 +1,50 @@
+﻿@model ClubActivitiesSystem.Models.ViewModel.CreateClubViewModel
+
+@{
+    ViewData["Title"] = "建立社團";
+}
+
+<div class="container mt-5">
+    <div class="row justify-content-center">
+        <div class="col-md-8">
+            <div class="card shadow-sm">
+                <div class="card-header bg-primary text-white">
+                    <h4 class="mb-0">建立新社團</h4>
+                </div>
+                <div class="card-body">
+                    <form asp-action="Create" method="post">
+                        <div asp-validation-summary="ModelOnly" class="alert alert-danger" role="alert"></div>
+
+                        <div class="mb-3">
+                            <label asp-for="ClubName" class="form-label fw-bold">社團名稱 <span class="text-danger">*</span></label>
+                            <input asp-for="ClubName" class="form-control" placeholder="請輸入社團名稱 (例如：攝影社)" />
+                            <span asp-validation-for="ClubName" class="text-danger"></span>
+                        </div>
+
+                        <div class="mb-3">
+                            <label asp-for="Description" class="form-label fw-bold">社團描述</label>
+                            <textarea asp-for="Description" class="form-control" rows="5" placeholder="請簡單介紹一下這個社團的宗旨與活動內容..."></textarea>
+                            <span asp-validation-for="Description" class="text-danger"></span>
+                            <div class="form-text">字數限制：500 字以內</div>
+                        </div>
+
+                        <div class="d-flex justify-content-between mt-4">
+                            <a asp-action="Index" class="btn btn-outline-secondary">
+                                <i class="bi bi-arrow-left"></i> 返回列表
+                            </a>
+                            <button type="submit" class="btn btn-primary px-4">
+                                <i class="bi bi-check-lg"></i> 立即建立
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    @{
+        await Html.RenderPartialAsync("_ValidationScriptsPartial");
+    }
+}
