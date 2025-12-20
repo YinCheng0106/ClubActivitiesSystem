@@ -1,0 +1,62 @@
+﻿@using ClubActivitiesSystem.Models.Entities
+@model IEnumerable<EventRegistration>
+
+@{
+    var ev = ViewBag.Event as Event;
+    ViewData["Title"] = $"「{ev?.Title}」報名列表";
+}
+
+<partial name="_FlashMessage" />
+
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <h2>@ViewData["Title"]</h2>
+    <div>
+        @if (ev is not null)
+        {
+            <a asp-action="Details" asp-route-id="@ev.Id" class="btn btn-outline-secondary">返回活動詳情</a>
+        }
+        else
+        {
+            <a asp-action="Index" class="btn btn-outline-secondary">返回列表</a>
+        }
+    </div>
+</div>
+
+@if (ev is not null)
+{
+    <div class="mb-3">
+        <strong>活動時間：</strong>
+        @ev.StartTime.ToLocalTime().ToString("yyyy/MM/dd HH:mm") ~
+        @ev.EndTime.ToLocalTime().ToString("yyyy/MM/dd HH:mm")
+        <br />
+        <strong>社團：</strong> @ev.Club?.ClubName
+        <br />
+        <strong>地點：</strong> @ev.Location
+    </div>
+}
+
+<table class="table table-bordered align-middle">
+    <thead>
+        <tr>
+            <th>報名者</th>
+            <th>報名時間</th>
+            <th>報名狀態</th>
+            <th>付款狀態</th>
+        </tr>
+    </thead>
+    <tbody>
+        @foreach (var r in Model)
+        {
+            <tr>
+                <td>@r.User?.Name (@r.UserId)</td>
+                <td>@r.RegisteredAt.ToLocalTime().ToString("yyyy/MM/dd HH:mm")</td>
+                <td>
+                    <span class="badge @(r.Status == "Cancelled" ? "bg-danger" : "bg-success")">@r.Status</span>
+                </td>
+                <td>
+                    <span class="badge @(r.PaymentStatus == "Paid" ? "bg-success" : "bg-secondary")">@r.PaymentStatus</span>
+                </td>
+            </tr>
+        }
+    </tbody>
+</table>

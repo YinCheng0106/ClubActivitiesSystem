@@ -1,0 +1,24 @@
+﻿@using ClubActivitiesSystem.Models.Entities
+@model Event
+
+@{
+    ViewData["Title"] = "建立活動";
+}
+
+<partial name="_FlashMessage" />
+
+<h2>@ViewData["Title"]</h2>
+<hr />
+
+<form asp-action="Create" method="post">
+    @Html.AntiForgeryToken()
+    <partial name="_EventForm" model="Model" />
+    <div class="mt-3 d-flex gap-2">
+        <button type="submit" class="btn btn-primary">儲存</button>
+        <a asp-action="Index" class="btn btn-outline-secondary">取消</a>
+    </div>
+</form>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+}

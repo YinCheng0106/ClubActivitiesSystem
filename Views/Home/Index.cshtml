@@ -4,7 +4,16 @@
 
 <div class="text-center">
     <h1 class="display-4">社團活動系統</h1>
-    <p>歡迎使用社團活動系統！請登入或註冊以繼續。</p>
-    <a class="btn btn-primary btn-lg" asp-area="" asp-controller="Account" asp-action="Login" role="button">登入</a>
-    <a class="btn btn-secondary btn-lg" asp-area="" asp-controller="Account" asp-action="Register" role="button">註冊</a>
+
+    @if (User?.Identity?.IsAuthenticated ?? false)
+    {
+        <p>歡迎回來，@User.Identity!.Name！</p>
+        <a class="btn btn-outline-danger btn-lg" asp-area="" asp-controller="Account" asp-action="Logout" role="button">登出</a>
+    }
+    else
+    {
+        <p>歡迎使用社團活動系統！請登入或註冊以繼續。</p>
+        <a class="btn btn-primary btn-lg" asp-area="" asp-controller="Account" asp-action="Login" role="button">登入</a>
+        <a class="btn btn-secondary btn-lg" asp-area="" asp-controller="Account" asp-action="Register" role="button">註冊</a>
+    }
 </div>

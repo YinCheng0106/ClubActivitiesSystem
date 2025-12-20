@@ -1,6 +1,7 @@
 using ClubActivitiesSystem.Db;
-using Microsoft.AspNetCore.Identity;
+using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.EntityFrameworkCore;
+
 namespace ClubActivitiesSystem
 {
     public class Program
@@ -15,13 +16,21 @@ namespace ClubActivitiesSystem
             builder.Services.AddDbContext<DBContext>(optios =>
                 optios.UseSqlServer(builder.Configuration.GetConnectionString("DBConnectionString")));
 
+            // 讓 [Authorize] / User.Identity.IsAuthenticated 行為穩定
+            builder.Services
+                .AddAuthentication(CookieAuthenticationDefaults.AuthenticationScheme)
+                .AddCookie(options =>
+                {
+                    options.LoginPath = "/Account/Login";
+                    options.AccessDeniedPath = "/Account/Login";
+                });
+
             var app = builder.Build();
 
             // Configure the HTTP request pipeline.
             if (!app.Environment.IsDevelopment())
             {
                 app.UseExceptionHandler("/Home/Error");
-                // The default HSTS value is 30 days. You may want to change this for production scenarios, see https://aka.ms/aspnetcore-hsts.
                 app.UseHsts();
             }
 
@@ -30,8 +39,8 @@ namespace ClubActivitiesSystem
 
             app.UseRouting();
 
+            app.UseAuthentication();
             app.UseMiddleware<SessionAuthMiddleware>();
-
             app.UseAuthorization();
 
             app.MapControllerRoute(

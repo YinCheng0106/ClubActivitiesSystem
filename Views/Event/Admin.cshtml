@@ -1,0 +1,60 @@
+﻿@using ClubActivitiesSystem.Models.Entities
+@model IEnumerable<Event>
+
+@{
+    ViewData["Title"] = "活動後台（管理員）";
+}
+
+<partial name="~/Views/Shared/_FlashMessage.cshtml" />
+
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <h2>@ViewData["Title"]</h2>
+    <a class="btn btn-primary" asp-action="Create">+ 建立活動</a>
+</div>
+
+<form method="get" class="row g-2 mb-3">
+    <div class="col-auto">
+        <input type="number" name="clubId" class="form-control" placeholder="社團ID" value="@(Context.Request.Query["clubId"])" />
+    </div>
+    <div class="col-auto">
+        <input type="text" name="status" class="form-control" placeholder="狀態" value="@(Context.Request.Query["status"])" />
+    </div>
+    <div class="col-auto">
+        <button class="btn btn-outline-secondary" type="submit">篩選</button>
+    </div>
+</form>
+
+<table class="table table-striped align-middle">
+    <thead>
+        <tr>
+            <th>ID</th>
+            <th>標題</th>
+            <th>社團</th>
+            <th>建立者</th>
+            <th>建立時間</th>
+            <th>狀態</th>
+            <th class="text-end">操作</th>
+        </tr>
+    </thead>
+    <tbody>
+        @foreach (var e in Model)
+        {
+            <tr>
+                <td>@e.Id</td>
+                <td><a asp-action="Details" asp-route-id="@e.Id">@e.Title</a></td>
+                <td>@e.Club?.ClubName</td>
+                <td>@e.CreatedByUser?.Name (@e.CreatedBy)</td>
+                <td>@e.CreatedAt.ToLocalTime().ToString("yyyy/MM/dd HH:mm")</td>
+                <td><span class="badge bg-secondary">@e.Status</span></td>
+                <td class="text-end">
+                    <a class="btn btn-sm btn-outline-primary me-1" asp-action="Edit" asp-route-id="@e.Id">編輯</a>
+                    <a class="btn btn-sm btn-outline-info me-1" asp-action="RegistrationList" asp-route-eventId="@e.Id">報名列表</a>
+                    <form asp-action="Delete" asp-route-id="@e.Id" method="post" class="d-inline" onsubmit="return confirm('確定要刪除這個活動嗎？');">
+                        @Html.AntiForgeryToken()
+                        <button type="submit" class="btn btn-sm btn-outline-danger">刪除</button>
+                    </form>
+                </td>
+            </tr>
+        }
+    </tbody>
+</table>
