@@ -33,6 +33,31 @@ namespace ClubActivitiesSystem.Controllers
                 : dt.ToUniversalTime();
         }
 
+        private async Task<bool> IsApprovedClubMemberAsync(int clubId, string userId)
+        {
+            return await db.ClubMembers
+                .AsNoTracking()
+                .AnyAsync(m => m.ClubId == clubId && m.UserId == userId && m.IsApproved);
+        }
+
+        private async Task<List<Club>> GetAllowedClubsForCurrentUserAsync()
+        {
+            if (IsAdmin)
+            {
+                return await db.Clubs.AsNoTracking().OrderBy(c => c.ClubName).ToListAsync();
+            }
+
+            var userId = CurrentUserId;
+            if (string.IsNullOrWhiteSpace(userId))
+                return [];
+
+            return await db.Clubs
+                .AsNoTracking()
+                .Where(c => db.ClubMembers.Any(m => m.ClubId == c.Id && m.UserId == userId && m.IsApproved))
+                .OrderBy(c => c.ClubName)
+                .ToListAsync();
+        }
+
         // 活動列表（對外公開）
         [AllowAnonymous]
         public async Task<IActionResult> Index(int? clubId, string? status, DateTime? from, DateTime? to)
@@ -63,7 +88,15 @@ namespace ClubActivitiesSystem.Controllers
         [HttpGet]
         public async Task<IActionResult> Create()
         {
-            ViewBag.Clubs = await db.Clubs.AsNoTracking().OrderBy(c => c.ClubName).ToListAsync();
+            ViewBag.Clubs = await GetAllowedClubsForCurrentUserAsync();
+
+            // 非 Admin 且沒有任何可用社團 => 禁止建立
+            if (!IsAdmin && ((IEnumerable<Club>)ViewBag.Clubs).Any() == false)
+            {
+                TempData["Error"] = "您不是任何社團的已核准成員，無法建立活動。";
+                return RedirectToAction(nameof(Index));
+            }
+
             return View(new Event
             {
                 StartTime = DateTime.UtcNow.AddDays(1),
@@ -80,12 +113,18 @@ namespace ClubActivitiesSystem.Controllers
             if (HttpContext.Items["User"] is not User user)
                 return RedirectToAction("Login", "Account");
 
+            // 權限：必須為該社團已核准成員（Admin 例外）
+            if (!IsAdmin && !await IsApprovedClubMemberAsync(model.ClubId, user.Id))
+            {
+                ModelState.AddModelError(nameof(model.ClubId), "您不是此社團的已核准成員，無法以該社團名義建立活動。");
+            }
+
             if (model.StartTime.HasValue && model.EndTime.HasValue && model.StartTime.Value >= model.EndTime.Value)
                 ModelState.AddModelError(nameof(model.EndTime), "結束時間必須晚於開始時間。");
 
             if (!ModelState.IsValid)
             {
-                ViewBag.Clubs = await db.Clubs.AsNoTracking().OrderBy(c => c.ClubName).ToListAsync();
+                ViewBag.Clubs = await GetAllowedClubsForCurrentUserAsync();
                 return View(model);
             }
 
@@ -120,7 +159,7 @@ namespace ClubActivitiesSystem.Controllers
 
             if (!IsEventOwner(ev) && !IsAdmin) return Forbid();
 
-            ViewBag.Clubs = await db.Clubs.AsNoTracking().OrderBy(c => c.ClubName).ToListAsync();
+            ViewBag.Clubs = await GetAllowedClubsForCurrentUserAsync();
             return View(ev);
         }
 
@@ -153,7 +192,16 @@ namespace ClubActivitiesSystem.Controllers
                     _logger.LogWarning("ModelState error on {Key}: {Errors}", key, errors);
                 }
 
-                ViewBag.Clubs = await db.Clubs.AsNoTracking().OrderBy(c => c.ClubName).ToListAsync();
+                ViewBag.Clubs = await GetAllowedClubsForCurrentUserAsync();
+                return View(ev);
+            }
+
+            // 權限：即使是活動擁有者，也不能把活動改到自己不是成員的社團（Admin 例外）
+            var userId = CurrentUserId;
+            if (!IsAdmin && !string.IsNullOrWhiteSpace(userId) && !await IsApprovedClubMemberAsync(ev.ClubId, userId))
+            {
+                ModelState.AddModelError(nameof(ev.ClubId), "您不是此社團的已核准成員，無法將活動指派到該社團。");
+                ViewBag.Clubs = await GetAllowedClubsForCurrentUserAsync();
                 return View(ev);
             }
 
@@ -163,7 +211,7 @@ namespace ClubActivitiesSystem.Controllers
             if (ev.StartTime >= ev.EndTime)
             {
                 ModelState.AddModelError(nameof(ev.EndTime), "結束時間必須晚於開始時間。");
-                ViewBag.Clubs = await db.Clubs.AsNoTracking().OrderBy(c => c.ClubName).ToListAsync();
+                ViewBag.Clubs = await GetAllowedClubsForCurrentUserAsync();
                 return View(ev);
             }
 
